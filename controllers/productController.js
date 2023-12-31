@@ -1,10 +1,12 @@
 const { validationResult } = require('express-validator');
-const BannerSchema = require('../db-schema/Banner');
+const ProductsSchema = require('../db-schema/Products');
 const fs = require('fs');
 
 module.exports = {
 
-    fetchBanner: async(req, res) => {
+    fetchProducts: async(req, res) => {
+
+        let categoryId = req.body.category_id;
 
         let success = true;
 
@@ -12,9 +14,9 @@ module.exports = {
 
             success = true;
 
-            const banner = await BannerSchema.find({});
+            const products = await ProductsSchema.find({ category_id: categoryId });
 
-            return res.status(200).json({ success, data: banner });
+            return res.status(200).json({ success, data: products });
 
         } catch (error) {
 
@@ -24,9 +26,9 @@ module.exports = {
 
     },
 
-    fetchEachBanner: async(req, res) => {
+    fetchEachProduct: async(req, res) => {
 
-        let bannerId = req.body.bannerId;
+        let productId = req.body.productId;
 
         let success = true;
 
@@ -34,9 +36,9 @@ module.exports = {
 
             success = true;
 
-            const banner = await BannerSchema.findOne({ _id: bannerId });
+            const product = await ProductsSchema.findOne({ _id: productId });
 
-            return res.status(200).json({ success, data: banner });
+            return res.status(200).json({ success, data: product });
 
         } catch (error) {
 
@@ -46,7 +48,7 @@ module.exports = {
 
     },
 
-    saveBanner: async(req, res) => {
+    saveProduct: async(req, res) => {
 
         let success = true;
 
@@ -55,7 +57,7 @@ module.exports = {
             return res.status(400).json({ success, message: errors.array() });
         }
 
-        const { formMode, itemId, itemTitle, itemDescription, itemImage, itemSourceImage, itemImageConfig } = req.body;
+        const { formMode, itemId, itemTitle, itemDescription, itemCategory, itemPrice, itemImage, itemSourceImage, itemImageConfig } = req.body;
 
         try {
 
@@ -63,36 +65,40 @@ module.exports = {
 
             if (formMode == "insert") {
 
-                //Insert banner data
-                const bannerCreate = await BannerSchema.create({
+                //Insert product data
+                const productCreate = await ProductsSchema.create({
                     title: itemTitle,
                     description: itemDescription,
+                    category_id: itemCategory,
+                    price: itemPrice,
                     image: "",
                     source_image: "",
                     image_config: itemImageConfig
                 });
 
-                var result = await bannerCreate.save();
+                var result = await productCreate.save();
 
             } else {
 
-                const bannerUpdate = {
+                const productUpdate = {
                     title: itemTitle,
                     description: itemDescription,
+                    category_id: itemCategory,
+                    price: itemPrice,
                     image_config: itemImageConfig,
                 };
 
-                var result = await BannerSchema.findByIdAndUpdate(itemId, { $set: bannerUpdate }, { new: true });
+                var result = await ProductsSchema.findByIdAndUpdate(itemId, { $set: productUpdate }, { new: true });
 
             }
 
 
-            //Update banner data with image
-            const bannerId = result._id;
+            //Update product data with image
+            const productId = result._id;
 
-            let imageUploadPath = "./uploads/banners";
-            let fileName = bannerId + '.jpg';
-            let sourceFileName = bannerId + '-s.jpg';
+            let imageUploadPath = "./uploads/products";
+            let fileName = productId + '.jpg';
+            let sourceFileName = productId + '-s.jpg';
 
             if (!fs.existsSync(imageUploadPath)) {
                 fs.mkdirSync(imageUploadPath);
@@ -110,14 +116,14 @@ module.exports = {
                 fs.writeFileSync(imageUploadPath + '/' + sourceFileName, Buffer.from(response.data));
             }
 
-            const updateBanner = {
+            const updateProduct = {
                 image: fileName,
                 source_image: sourceFileName,
             };
 
-            var result = await BannerSchema.findByIdAndUpdate(bannerId, { $set: updateBanner }, { new: true });
+            var result = await ProductsSchema.findByIdAndUpdate(productId, { $set: updateProduct }, { new: true });
 
-            return res.status(200).json({ success, message: "Banner saved successfully", result });
+            return res.status(200).json({ success, message: "Product saved successfully", result });
 
         } catch (error) {
 
@@ -127,27 +133,27 @@ module.exports = {
 
     },
 
-    deleteBanner: async(req, res) => {
+    deleteProduct: async(req, res) => {
 
-        let bannerId = req.body.bannerId;
+        let productId = req.body.productId;
 
         let success = true;
 
         try {
 
-            const banner = await BannerSchema.findOne({ _id: bannerId });
+            const product = await ProductsSchema.findOne({ _id: productId });
 
-            if (!banner) {
+            if (!product) {
                 return res.status(404).json({ success, message: "Record not found!" });
             }
 
             success = true;
 
-            const result = await BannerSchema.findByIdAndDelete({ _id: bannerId });
+            const result = await ProductsSchema.findByIdAndDelete({ _id: productId });
 
-            let imageUploadPath = "./uploads/banners";
-            let fileName = bannerId + '.jpg';
-            let sourceFileName = bannerId + '-s.jpg';
+            let imageUploadPath = "./uploads/products";
+            let fileName = productId + '.jpg';
+            let sourceFileName = productId + '-s.jpg';
 
             fs.unlinkSync(imageUploadPath + '/' + sourceFileName);
             fs.unlinkSync(imageUploadPath + '/' + fileName);
